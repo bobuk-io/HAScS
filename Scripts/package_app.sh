@@ -21,6 +21,10 @@ else
   BUILD_NUMBER=${BUILD_NUMBER:-1}
 fi
 
+# Generate every standard and Retina representation from the committed icon master.
+ICON_TARGET="$ROOT/.build/Icon.icns"
+"$ROOT/Scripts/build_icon.sh" "$ICON_TARGET"
+
 ARCH_LIST=( ${ARCHES:-} )
 if [[ ${#ARCH_LIST[@]} -eq 0 ]]; then
   HOST_ARCH=$(uname -m)
@@ -41,13 +45,6 @@ fi
 mkdir -p "$OUTPUT_DIR"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Frameworks"
-
-# Convert Icon.icon to Icon.icns if present (requires iconutil).
-ICON_SOURCE="$ROOT/Icon.icon"
-ICON_TARGET="$ROOT/Icon.icns"
-if [[ -f "$ICON_SOURCE" ]]; then
-  iconutil --convert icns --output "$ICON_TARGET" "$ICON_SOURCE"
-fi
 
 LSUI_VALUE="false"
 if [[ "$MENU_BAR_APP" == "1" ]]; then
@@ -178,9 +175,7 @@ for dir in "${FRAMEWORK_DIRS[@]}"; do
   fi
 done
 
-if [[ -f "$ICON_TARGET" ]]; then
-  cp "$ICON_TARGET" "$APP/Contents/Resources/Icon.icns"
-fi
+cp "$ICON_TARGET" "$APP/Contents/Resources/Icon.icns"
 
 # Ensure contents are writable before stripping attributes and signing.
 chmod -R u+w "$APP"

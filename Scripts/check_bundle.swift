@@ -17,6 +17,12 @@ guard let app = Bundle(url: appURL),
     exit(1)
 }
 require(app.bundleIdentifier == "io.bobuk.HAScS", "unexpected bundle identifier")
+require(app.object(forInfoDictionaryKey: "CFBundleIconFile") as? String == "Icon", "unexpected app icon reference")
+guard let icon = try? Data(contentsOf: resources.appendingPathComponent("Icon.icns")) else {
+    fputs("Bundle check failed: app icon is missing\n", stderr)
+    exit(1)
+}
+require(icon.count > 8 && icon.prefix(4) == Data("icns".utf8), "invalid ICNS icon")
 require(Set(app.localizations) == Set(["en", "uk", "ru"]), "unexpected app localizations")
 require(app.developmentLocalization == "en", "English fallback missing")
 let expected = ["en": "Home scenes", "uk": "Сцени дому", "ru": "Сцены дома"]

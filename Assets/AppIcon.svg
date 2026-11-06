@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" fill="none">
+  <title>HAScS — Scene Dial app icon</title>
+  <desc>A circular three-position scene selector on an indigo rounded square, with one amber segment selected and an ivory home at its centre. Original vector artwork.</desc>
+  <defs>
+    <path id="tile" d="M286 96H738C865 96 928 159 928 286V738C928 865 865 928 738 928H286C159 928 96 865 96 738V286C96 159 159 96 286 96Z"/>
+    <clipPath id="tileClip"><use href="#tile"/></clipPath>
+    <linearGradient id="indigo" x1="280" y1="96" x2="710" y2="928" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#66618B"/><stop offset=".47" stop-color="#443E6C"/><stop offset="1" stop-color="#282740"/>
+    </linearGradient>
+    <radialGradient id="light" cx="0" cy="0" r="1" gradientTransform="translate(340 200) rotate(65) scale(700 740)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#DDD4FF" stop-opacity=".12"/><stop offset="1" stop-color="#DDD4FF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="tileEdge" x1="512" y1="96" x2="512" y2="928" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#EAE1FF" stop-opacity=".5"/><stop offset=".5" stop-color="#EAE1FF" stop-opacity=".04"/><stop offset="1" stop-color="#171B32" stop-opacity=".5"/>
+    </linearGradient>
+    <linearGradient id="bezel" x1="390" y1="206" x2="680" y2="818" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#625B84"/><stop offset="1" stop-color="#35324F"/>
+    </linearGradient>
+    <linearGradient id="well" x1="420" y1="286" x2="600" y2="738" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#302D4C"/><stop offset="1" stop-color="#484363"/>
+    </linearGradient>
+    <linearGradient id="lavender" x1="300" y1="390" x2="610" y2="795" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D7D0E8"/><stop offset=".5" stop-color="#B7B0CF"/><stop offset="1" stop-color="#938EAF"/>
+    </linearGradient>
+    <linearGradient id="amber" x1="520" y1="232" x2="785" y2="500" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFE5A8"/><stop offset=".48" stop-color="#F4C77E"/><stop offset="1" stop-color="#D59350"/>
+    </linearGradient>
+    <linearGradient id="homeFill" x1="460" y1="345" x2="570" y2="680" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFEF2"/><stop offset="1" stop-color="#E6E2DC"/>
+    </linearGradient>
+    <path id="home" d="M354 462L493 340C504 330 520 330 531 340L670 462C682 473 683 490 673 501C667 508 660 511 651 511H641V646C641 665 626 680 607 680H550V588C550 567 533 550 512 550C491 550 474 567 474 588V680H417C398 680 383 665 383 646V511H373C359 511 347 502 343 489C340 479 344 470 354 462Z"/>
+    <filter id="dialShadow" x="140" y="150" width="744" height="744" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="18"/></filter>
+    <filter id="homeShadow" x="310" y="310" width="405" height="420" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="6"/></filter>
+  </defs>
+  <g clip-path="url(#tileClip)">
+    <use href="#tile" fill="url(#indigo)"/>
+    <use href="#tile" fill="url(#light)"/>
+    <circle cx="512" cy="533" r="310" fill="#16192E" opacity=".52" filter="url(#dialShadow)"/>
+    <circle cx="512" cy="520" r="310" fill="#25263D"/>
+    <circle cx="512" cy="512" r="310" fill="url(#bezel)"/>
+    <circle cx="512" cy="512" r="308" stroke="#BFB4D7" stroke-opacity=".15" stroke-width="2"/>
+    <circle cx="512" cy="512" r="232" fill="url(#well)"/>
+    <circle cx="512" cy="512" r="232" stroke="#24253E" stroke-opacity=".68" stroke-width="3"/>
+    <!-- Three broad positions; the amber arc is the selection, not a separate badge. -->
+    <g stroke-width="60" stroke-linecap="round">
+      <path d="M762.14 628.64A276 276 0 0 1 395.36 762.15" stroke="#716A90" transform="translate(0 5)"/>
+      <path d="M285.92 670.31A276 276 0 0 1 353.69 285.92" stroke="#716A90" transform="translate(0 5)"/>
+      <path d="M487.94 237.05A276 276 0 0 1 786.95 487.94" stroke="#B17542" transform="translate(0 5)"/>
+      <path d="M762.14 628.64A276 276 0 0 1 395.36 762.15" stroke="url(#lavender)"/>
+      <path d="M285.92 670.31A276 276 0 0 1 353.69 285.92" stroke="url(#lavender)"/>
+      <path d="M487.94 237.05A276 276 0 0 1 786.95 487.94" stroke="url(#amber)"/>
+    </g>
+    <path d="M491.4 242.4A270.4 270.4 0 0 1 782.1 482.8" stroke="#FFF0C7" stroke-opacity=".38" stroke-width="3" stroke-linecap="round"/>
+    <use href="#home" transform="translate(0 8)" fill="#171B30" opacity=".48" filter="url(#homeShadow)"/>
+    <use href="#home" transform="translate(0 3)" fill="#B4AEC3"/>
+    <use href="#home" fill="url(#homeFill)"/>
+    <path d="M360 467L497 347C506 339 518 339 527 347L664 467" stroke="#FFFFFF" stroke-opacity=".58" stroke-width="3" stroke-linecap="round"/>
+    <use href="#tile" stroke="url(#tileEdge)" stroke-width="3"/>
+  </g>
+</svg>

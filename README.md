@@ -99,6 +99,14 @@ Networking, configuration, Keychain storage, localization resources and scene
 assignments live in `Sources/HAScSCore`. Tests use fake credentials and mock
 transports; do not activate real scenes while validating changes.
 
+### App icon
+
+The selected **Scene Dial** artwork lives in `Assets/AppIcon.svg`; its
+1024×1024 transparent PNG master is `Assets/AppIcon.png`. Packaging runs
+`Scripts/build_icon.sh` to generate `Icon.icns` with all standard and Retina
+sizes using macOS `sips` and `iconutil`. No external tools are needed for builds.
+If the vector artwork changes, re-render the PNG master before packaging.
+
 ## Release
 
 Configure a Developer ID Application signing identity and a saved `notarytool`
