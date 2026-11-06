@@ -13,5 +13,6 @@ let package = Package(
         .target(name: "HAScSCore", resources: [.process("Resources")]),
         .executableTarget(name: "HAScS", dependencies: ["HAScSCore"]),
         .testTarget(name: "HAScSCoreTests", dependencies: ["HAScSCore"]),
+        .testTarget(name: "HAScSAppTests", dependencies: ["HAScS", "HAScSCore"]),
     ]
 )

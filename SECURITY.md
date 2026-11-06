@@ -5,7 +5,7 @@
 Please report security issues privately using GitHub's **Report a vulnerability**
 feature:
 
-<https://github.com/bobuk/HAScS/security/advisories/new>
+<https://github.com/bobuk-io/HAScS/security/advisories/new>
 
 If that feature is unavailable, email **bobuk@rubedo.cloud** with the subject
 `HAScS security report`.

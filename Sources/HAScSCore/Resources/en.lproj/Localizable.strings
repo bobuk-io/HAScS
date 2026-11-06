@@ -22,6 +22,14 @@
 "%@, scene %lld" = "%@, scene %lld";
 "%@, scene %lld, unavailable" = "%@, scene %lld, unavailable";
 "Run scene" = "Run scene";
+"Reorder" = "Reorder";
+"Reorder scenes" = "Reorder scenes";
+"Drag tiles to reorder. Scenes will not run." = "Drag tiles to reorder. Scenes will not run.";
+"Shift + ←/→ move" = "Shift + ←/→ move";
+"Select to move with Shift and arrow keys" = "Select to move with Shift and arrow keys";
+"Move earlier" = "Move earlier";
+"Move later" = "Move later";
+"Done" = "Done";
 "Connection to your home" = "Connection to your home";
 "Server URL" = "Server URL";
 "Access token" = "Access token";

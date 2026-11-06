@@ -13,7 +13,7 @@ struct ScenePanelView: View {
     let close: () -> Void
     let refresh: () -> Void
     let settings: () -> Void
-    @Environment(\.colorScheme) private var colorScheme
+    @State private var dropTargetID: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -28,6 +28,7 @@ struct ScenePanelView: View {
         .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(.primary.opacity(0.10)))
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text("Home Assistant scene remote", bundle: L10n.bundle))
+        .onChange(of: store.isReordering) { dropTargetID = nil }
     }
 
     private var header: some View {
@@ -39,6 +40,14 @@ struct ScenePanelView: View {
             Spacer()
             Circle().fill(statusColor).frame(width: 6, height: 6).accessibilityHidden(true)
             Text(statusLabel, bundle: L10n.bundle).font(.caption2).foregroundStyle(.secondary)
+            if !store.isReordering && store.status == .ready && store.slots.count > 1 {
+                Button(action: store.beginReordering) {
+                    Label { Text("Reorder", bundle: L10n.bundle) } icon: { Image(systemName: "arrow.up.arrow.down") }
+                }
+                .disabled(store.isActivating || store.successName != nil)
+                .help(Text("Reorder scenes", bundle: L10n.bundle))
+                .accessibilityLabel(Text("Reorder scenes", bundle: L10n.bundle))
+            }
             Button(action: settings) {
                 Image(systemName: "gearshape").font(.system(size: 13))
             }
@@ -56,7 +65,7 @@ struct ScenePanelView: View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Home scenes", bundle: L10n.bundle).font(.system(size: 28, weight: .semibold)).tracking(-0.8)
-                Text("Choose a scene or press a number", bundle: L10n.bundle)
+                Text(store.isReordering ? "Drag tiles to reorder. Scenes will not run." : "Choose a scene or press a number", bundle: L10n.bundle)
                     .font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
@@ -103,9 +112,7 @@ struct ScenePanelView: View {
                         ForEach(rows) { row in
                             GridRow {
                                 ForEach(row.slots) { slot in
-                                    SceneTile(slot: slot, featured: row.featured && slot.id == store.slots.first?.id,
-                                              selected: slot.number == store.selectedNumber,
-                                              busy: store.isActivating, action: { activate(slot.number) })
+                                    sceneTile(slot, featured: row.featured && slot.id == store.slots.first?.id)
                                     .id(slot.id)
                                     .gridCellColumns(row.featured && slot.id == store.slots.first?.id ? 2 : 1)
                                 }
@@ -147,6 +154,61 @@ struct ScenePanelView: View {
         }
     }
 
+    @ViewBuilder
+    private func sceneTile(_ slot: SceneSlot, featured: Bool) -> some View {
+        let tile = SceneTile(slot: slot, featured: featured,
+                             selected: slot.number == store.selectedNumber,
+                             busy: store.isActivating, editing: store.isReordering) {
+            if store.isReordering { store.selectForReordering(slot.number) }
+            else { activate(slot.number) }
+        }
+        if store.isReordering {
+            tile
+                .draggable(slot.id)
+                .dropDestination(for: String.self) { ids, _ in
+                    dropTargetID = nil
+                    guard ids.count == 1, let id = ids.first,
+                          let position = store.slots.firstIndex(where: { $0.id == slot.id }) else { return false }
+                    return store.moveScene(id, toPosition: position)
+                } isTargeted: { targeted in
+                    if targeted { dropTargetID = slot.id }
+                    else if dropTargetID == slot.id { dropTargetID = nil }
+                }
+                .overlay {
+                    if dropTargetID == slot.id {
+                        RoundedRectangle(cornerRadius: 11).strokeBorder(Color.accentColor, lineWidth: 3)
+                            .allowsHitTesting(false)
+                    }
+                }
+                .contextMenu {
+                    Button {
+                        if let index = store.slots.firstIndex(where: { $0.id == slot.id }) {
+                            store.moveScene(slot.id, toPosition: index - 1)
+                        }
+                    } label: { Text("Move earlier", bundle: L10n.bundle) }
+                    .disabled(slot.id == store.slots.first?.id)
+                    Button {
+                        if let index = store.slots.firstIndex(where: { $0.id == slot.id }) {
+                            store.moveScene(slot.id, toPosition: index + 1)
+                        }
+                    } label: { Text("Move later", bundle: L10n.bundle) }
+                    .disabled(slot.id == store.slots.last?.id)
+                }
+                .accessibilityAction(named: Text("Move earlier", bundle: L10n.bundle)) {
+                    if let index = store.slots.firstIndex(where: { $0.id == slot.id }) {
+                        store.moveScene(slot.id, toPosition: index - 1)
+                    }
+                }
+                .accessibilityAction(named: Text("Move later", bundle: L10n.bundle)) {
+                    if let index = store.slots.firstIndex(where: { $0.id == slot.id }) {
+                        store.moveScene(slot.id, toPosition: index + 1)
+                    }
+                }
+        } else {
+            tile
+        }
+    }
+
     private func emptyState(symbol: String, title: LocalizedStringKey, message: Text) -> some View {
         VStack(spacing: 11) {
             Image(systemName: symbol).font(.system(size: 27)).foregroundStyle(.secondary).accessibilityHidden(true)
@@ -166,17 +228,29 @@ struct ScenePanelView: View {
         VStack(spacing: 0) {
             Divider()
             HStack(spacing: 8) {
-                if let last = store.lastSentName {
-                    Text("Last request · \(last)", bundle: L10n.bundle).lineLimit(1)
+                if store.isReordering {
+                    Text("Shift + ←/→ move", bundle: L10n.bundle)
+                    Spacer()
+                    Button { store.finishReordering(save: false) } label: {
+                        Text("Cancel", bundle: L10n.bundle)
+                    }
+                    Button { store.finishReordering(save: true) } label: {
+                        Text("Done", bundle: L10n.bundle)
+                    }
+                    .buttonStyle(.borderedProminent)
                 } else {
-                    Image(systemName: "keyboard").accessibilityHidden(true)
-                    Text("1–9 run", bundle: L10n.bundle)
+                    if let last = store.lastSentName {
+                        Text("Last request · \(last)", bundle: L10n.bundle).lineLimit(1)
+                    } else {
+                        Image(systemName: "keyboard").accessibilityHidden(true)
+                        Text("1–9 run", bundle: L10n.bundle)
+                    }
+                    Spacer()
+                    Text("↑↓ select   ↵ run", bundle: L10n.bundle)
+                    Spacer()
+                    Button(action: close) { Text("esc  close", bundle: L10n.bundle) }.buttonStyle(.plain)
+                        .accessibilityLabel(Text("Close remote", bundle: L10n.bundle))
                 }
-                Spacer()
-                Text("↑↓ select   ↵ run", bundle: L10n.bundle)
-                Spacer()
-                Button(action: close) { Text("esc  close", bundle: L10n.bundle) }.buttonStyle(.plain)
-                    .accessibilityLabel(Text("Close remote", bundle: L10n.bundle))
             }
             .font(.caption2).foregroundStyle(.secondary)
             .padding(.horizontal, 25)
@@ -205,6 +279,7 @@ private struct SceneTile: View {
     let featured: Bool
     let selected: Bool
     let busy: Bool
+    let editing: Bool
     let action: () -> Void
     @Environment(\.colorScheme) private var colorScheme
     @State private var hovering = false
@@ -215,6 +290,9 @@ private struct SceneTile: View {
                 HStack(alignment: .top) {
                     Image(systemName: symbol).font(.system(size: 22, weight: .regular)).accessibilityHidden(true)
                     Spacer()
+                    if editing {
+                        Image(systemName: "line.3.horizontal").font(.caption).accessibilityHidden(true)
+                    }
                     Text("\(slot.number)").font(.caption2.monospacedDigit())
                         .frame(width: 23, height: 25)
                         .background(keyBackground, in: RoundedRectangle(cornerRadius: 5))
@@ -235,10 +313,10 @@ private struct SceneTile: View {
             .opacity(slot.scene.isAvailable ? 1 : 0.5)
         }
         .buttonStyle(.plain)
-        .disabled(!slot.scene.isAvailable || busy)
+        .disabled((!editing && !slot.scene.isAvailable) || busy)
         .onHover { hovering = $0 }
         .accessibilityLabel(accessibilityTitle)
-        .accessibilityHint(Text("Run scene", bundle: L10n.bundle))
+        .accessibilityHint(Text(editing ? "Select to move with Shift and arrow keys" : "Run scene", bundle: L10n.bundle))
     }
 
     private var accessibilityTitle: Text {

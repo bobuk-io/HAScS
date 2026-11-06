@@ -43,6 +43,16 @@ public enum SceneGridLayout {
 
 /// Retain existing assignments as entities are added or removed; free slots can be reused.
 public enum SceneAssignments {
+    /// Move to a visible position, shifting intervening scenes and numbering in reading order.
+    public static func moving(_ slots: [SceneSlot], sceneID: String, toPosition position: Int) -> [SceneSlot] {
+        guard let source = slots.firstIndex(where: { $0.id == sceneID }),
+              slots.indices.contains(position), source != position else { return slots }
+        var reordered = slots
+        let moved = reordered.remove(at: source)
+        reordered.insert(moved, at: position)
+        return reordered.enumerated().map { SceneSlot(number: $0.offset + 1, scene: $0.element.scene) }
+    }
+
     public static func assign(scenes: [HAScene], previous: [String: Int]) -> [SceneSlot] {
         let sorted = scenes.sorted { $0.entityID.localizedStandardCompare($1.entityID) == .orderedAscending }
         var used = Set<Int>()

@@ -10,7 +10,7 @@ final class RemotePanel: NSPanel {
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
-    private let store = SceneStore()
+    private let store: SceneStore
     private var statusItem: NSStatusItem!
     private var panel: RemotePanel!
     private var settingsWindow: NSWindow?
@@ -19,6 +19,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var presentation = 0
     private var launchFinished = false
     private var pendingOpen = false
+
+    override convenience init() {
+        self.init(store: SceneStore())
+    }
+
+    init(store: SceneStore) {
+        self.store = store
+        super.init()
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -183,7 +192,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             // Physical digit keys still work with non-Latin keyboard layouts.
             let digits: [UInt16: Int] = [18: 1, 19: 2, 20: 3, 21: 4, 23: 5, 22: 6, 26: 7, 28: 8, 25: 9,
                                         83: 1, 84: 2, 85: 3, 86: 4, 87: 5, 88: 6, 89: 7, 91: 8, 92: 9]
-            if let number = digits[event.keyCode] { self.activate(number); return nil }
+            if let number = digits[event.keyCode] {
+                if !self.store.isReordering { self.activate(number) }
+                return nil
+            }
+            if self.store.isReordering {
+                switch event.keyCode {
+                case 53: self.store.finishReordering(save: false); return nil
+                case 36, 76: self.store.finishReordering(save: true); return nil
+                case 126, 123, 125, 124:
+                    let direction = (event.keyCode == 126 || event.keyCode == 123) ? -1 : 1
+                    if modifiers.contains(.shift) { self.store.moveSelectedScene(direction) }
+                    else { self.store.moveSelection(direction) }
+                    return nil
+                default: return event
+                }
+            }
             switch event.keyCode {
             case 53: self.hidePanel(); return nil // Escape
             case 126, 123: self.store.moveSelection(-1); return nil // up / left

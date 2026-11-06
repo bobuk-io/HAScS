@@ -22,6 +22,14 @@
 "%@, scene %lld" = "%@, сцена %lld";
 "%@, scene %lld, unavailable" = "%@, сцена %lld, недоступна";
 "Run scene" = "Запустить сцену";
+"Reorder" = "Порядок";
+"Reorder scenes" = "Изменить порядок сцен";
+"Drag tiles to reorder. Scenes will not run." = "Перетаскивайте плитки. Сцены не будут запускаться.";
+"Shift + ←/→ move" = "Shift + ←/→ переместить";
+"Select to move with Shift and arrow keys" = "Выберите, затем перемещайте с помощью Shift и стрелок";
+"Move earlier" = "Переместить раньше";
+"Move later" = "Переместить позже";
+"Done" = "Готово";
 "Connection to your home" = "Подключение к вашему дому";
 "Server URL" = "Адрес сервера";
 "Access token" = "Токен доступа";

@@ -195,6 +195,31 @@ final class HAScSCoreTests: XCTestCase {
         XCTAssertEqual(Set(invalid.map(\.number)).count, 3)
     }
 
+    func testReorderingShiftsInsteadOfSwappingAndKeepsIdentity() throws {
+        let scenes = try (1...9).map { try scene("item_\($0)") }
+        let slots = SceneAssignments.assign(scenes: scenes, previous: [:])
+        let lastToFirst = SceneAssignments.moving(slots, sceneID: slots[8].id, toPosition: 0)
+        XCTAssertEqual(lastToFirst.map(\.id), [slots[8].id] + slots.dropLast().map(\.id))
+        XCTAssertEqual(lastToFirst.map(\.number), Array(1...9))
+        XCTAssertEqual(SceneAssignments.moving(lastToFirst, sceneID: slots[8].id, toPosition: 8), slots)
+        XCTAssertEqual(SceneAssignments.moving(slots, sceneID: "scene.missing", toPosition: 0), slots)
+        XCTAssertEqual(SceneAssignments.moving(slots, sceneID: slots[0].id, toPosition: -1), slots)
+        XCTAssertEqual(SceneAssignments.moving(slots, sceneID: slots[0].id, toPosition: 9), slots)
+        XCTAssertEqual(SceneAssignments.moving(slots, sceneID: slots[0].id, toPosition: 0), slots)
+        XCTAssertTrue(SceneAssignments.moving([], sceneID: "scene.missing", toPosition: 0).isEmpty)
+    }
+
+    func testReorderingCompactsGapsAndSurvivesAddedScenes() throws {
+        let a = try scene("alpha"), b = try scene("beta"), c = try scene("charlie")
+        let slots = [SceneSlot(number: 2, scene: a), SceneSlot(number: 7, scene: b)]
+        let moved = SceneAssignments.moving(slots, sceneID: b.id, toPosition: 0)
+        XCTAssertEqual(moved.map(\.number), [1, 2])
+        let saved = Dictionary(uniqueKeysWithValues: moved.map { ($0.id, $0.number) })
+        let refreshed = SceneAssignments.assign(scenes: [c, a, b], previous: saved)
+        XCTAssertEqual(refreshed.map(\.id), [b.id, a.id, c.id])
+        XCTAssertEqual(refreshed.map(\.number), [1, 2, 3])
+    }
+
     func testGridLayoutForAdditionalScenes() throws {
         let scenes = try (1...10).map { try scene("item_\($0)") }
         for (total, expected) in [(6, [2, 3, 1]), (7, [2, 3, 2]), (10, [2, 3, 3, 1])] {
