@@ -229,7 +229,7 @@ struct ScenePanelView: View {
             Divider()
             HStack(spacing: 8) {
                 if store.isReordering {
-                    Text("Shift + ←/→ move", bundle: L10n.bundle)
+                    Text("Shift + arrows move", bundle: L10n.bundle)
                     Spacer()
                     Button { store.finishReordering(save: false) } label: {
                         Text("Cancel", bundle: L10n.bundle)

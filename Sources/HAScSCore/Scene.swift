@@ -28,7 +28,65 @@ public struct SceneGridRow: Identifiable, Equatable, Sendable {
     public var id: String { slots[0].id }
 }
 
+public enum SceneGridDirection: CaseIterable, Sendable {
+    case left, right, up, down
+}
+
 public enum SceneGridLayout {
+    public struct Destination: Equatable, Sendable {
+        public let number: Int
+        public let column: Int
+    }
+
+    private struct Cell {
+        let slot: SceneSlot
+        let column: Int
+        let span: Int
+
+        func distance(to column: Int) -> Int {
+            max(self.column - column, column - (self.column + span - 1), 0)
+        }
+    }
+
+    /// Navigate the rendered rows, retaining the intended column through wide or short rows.
+    public static func destination(in slots: [SceneSlot], from number: Int?, direction: SceneGridDirection,
+                                   preferredColumn: Int? = nil, includeUnavailable: Bool = false) -> Destination? {
+        let grid = rows(for: slots).map { row in
+            var column = 0
+            return row.slots.enumerated().map { index, slot in
+                let span = row.featured && index == 0 ? 2 : 1
+                defer { column += span }
+                return Cell(slot: slot, column: column, span: span)
+            }
+        }
+        func selectable(_ cell: Cell) -> Bool { includeUnavailable || cell.slot.scene.isAvailable }
+        guard let rowIndex = grid.firstIndex(where: { $0.contains(where: { $0.slot.number == number }) }),
+              let current = grid[rowIndex].first(where: { $0.slot.number == number }) else {
+            guard let first = grid.joined().first(where: selectable) else { return nil }
+            return Destination(number: first.slot.number, column: first.column)
+        }
+        switch direction {
+        case .left, .right:
+            let candidates = grid[rowIndex].filter {
+                selectable($0) && (direction == .left ? $0.column < current.column : $0.column > current.column)
+            }
+            guard let next = direction == .left ? candidates.last : candidates.first else { return nil }
+            let column = direction == .left ? next.column + next.span - 1 : next.column
+            return Destination(number: next.slot.number, column: column)
+        case .up, .down:
+            let column = min(2, max(0, preferredColumn ?? current.column))
+            let step = direction == .up ? -1 : 1
+            var nextRow = rowIndex + step
+            while grid.indices.contains(nextRow) {
+                if let next = grid[nextRow].filter(selectable).min(by: { $0.distance(to: column) < $1.distance(to: column) }) {
+                    return Destination(number: next.slot.number, column: column)
+                }
+                nextRow += step
+            }
+            return nil
+        }
+    }
+
     public static func rows(for slots: [SceneSlot]) -> [SceneGridRow] {
         guard !slots.isEmpty else { return [] }
         var rows = [SceneGridRow(slots: Array(slots.prefix(2)), featured: true)]

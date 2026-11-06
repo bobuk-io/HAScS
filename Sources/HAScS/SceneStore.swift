@@ -13,6 +13,7 @@ final class SceneStore {
     private(set) var slots: [SceneSlot] = []
     private(set) var totalScenes = 0
     private(set) var selectedNumber: Int?
+    @ObservationIgnored private var navigationColumn: Int?
     private(set) var isActivating = false
     private(set) var isReordering = false
     @ObservationIgnored private var originalSlots: [SceneSlot]?
@@ -58,6 +59,7 @@ final class SceneStore {
             self.client = client
             self.slots = assigned
             self.totalScenes = scenes.count
+            self.navigationColumn = nil
             self.selectedNumber = assigned.first(where: { $0.scene.isAvailable })?.number
             self.status = .ready
         } catch {
@@ -72,6 +74,7 @@ final class SceneStore {
         guard status == .ready, !isActivating, !isReordering, let client,
               let slot = slots.first(where: { $0.number == number }), slot.scene.isAvailable else { return false }
         selectedNumber = number
+        navigationColumn = nil
         isActivating = true
         activationError = nil
         successName = nil
@@ -127,6 +130,7 @@ final class SceneStore {
             slots = originalSlots
         }
         self.originalSlots = nil
+        navigationColumn = nil
         isReordering = false
         selectedNumber = slots.first(where: { $0.id == selectedID && $0.scene.isAvailable })?.number
             ?? slots.first(where: { $0.scene.isAvailable })?.number
@@ -136,25 +140,32 @@ final class SceneStore {
     func moveScene(_ id: String, toPosition position: Int) -> Bool {
         guard isReordering, slots.contains(where: { $0.id == id }), slots.indices.contains(position) else { return false }
         slots = SceneAssignments.moving(slots, sceneID: id, toPosition: position)
+        navigationColumn = nil
         selectedNumber = slots.first(where: { $0.id == id })?.number
         return true
     }
 
-    func moveSelectedScene(_ direction: Int) {
-        guard let index = slots.firstIndex(where: { $0.number == selectedNumber }) else { return }
-        moveScene(slots[index].id, toPosition: index + direction)
+    func moveSelectedScene(_ direction: SceneGridDirection) {
+        guard isReordering,
+              let selected = slots.first(where: { $0.number == selectedNumber }),
+              let destination = SceneGridLayout.destination(in: slots, from: selectedNumber, direction: direction,
+                                                           preferredColumn: navigationColumn, includeUnavailable: true),
+              let index = slots.firstIndex(where: { $0.number == destination.number }) else { return }
+        if moveScene(selected.id, toPosition: index) { navigationColumn = destination.column }
     }
 
     func selectForReordering(_ number: Int) {
         guard isReordering, slots.contains(where: { $0.number == number }) else { return }
+        navigationColumn = nil
         selectedNumber = number
     }
 
-    func moveSelection(_ direction: Int) {
-        guard status == .ready, !isActivating else { return }
-        let numbers = slots.filter { isReordering || $0.scene.isAvailable }.map(\.number)
-        guard !numbers.isEmpty else { return }
-        let current = selectedNumber.flatMap { numbers.firstIndex(of: $0) } ?? 0
-        selectedNumber = numbers[(current + direction + numbers.count) % numbers.count]
+    func moveSelection(_ direction: SceneGridDirection) {
+        guard status == .ready, !isActivating,
+              let destination = SceneGridLayout.destination(in: slots, from: selectedNumber, direction: direction,
+                                                           preferredColumn: navigationColumn,
+                                                           includeUnavailable: isReordering) else { return }
+        selectedNumber = destination.number
+        navigationColumn = destination.column
     }
 }

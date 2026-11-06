@@ -21,7 +21,8 @@ include a stapled notarization ticket. Each release includes a SHA-256 checksum.
 - **Click the house icon:** show or hide the remote.
 - **Right-click:** open Settings or quit HAScS.
 - **1–9:** activate the corresponding scene, including numeric-keypad keys.
-- **Arrow keys:** select a scene. **Return:** activate it. **Escape:** hide the panel.
+- **Arrow keys:** select a scene spatially: left/right within a row, up/down
+  between rows. **Return:** activate it. **Escape:** hide the panel.
 - **Command-comma** or the gear button: open Settings from the remote.
 - **Deep link:** open the remote without activating a scene:
 
@@ -51,7 +52,10 @@ and Home Assistant response-order changes.
 
 Scenes cannot run while reordering. Click a tile to select it, then use
 **Shift + arrow keys** to move it without dragging; plain arrows change selection.
-The same moves are available in each tile's context menu and VoiceOver actions.
+Up/down moves between rows, preserving the intended column through the wide first
+tile and incomplete rows; left/right stays within the current row. Movement stops
+at the grid edges. Normal selection skips unavailable scenes; reordering includes
+them. Each tile's context menu and VoiceOver actions also offer earlier/later moves.
 
 ## Languages
 

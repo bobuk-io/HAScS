@@ -25,7 +25,7 @@
 "Reorder" = "Reorder";
 "Reorder scenes" = "Reorder scenes";
 "Drag tiles to reorder. Scenes will not run." = "Drag tiles to reorder. Scenes will not run.";
-"Shift + ←/→ move" = "Shift + ←/→ move";
+"Shift + arrows move" = "Shift + arrows move";
 "Select to move with Shift and arrow keys" = "Select to move with Shift and arrow keys";
 "Move earlier" = "Move earlier";
 "Move later" = "Move later";

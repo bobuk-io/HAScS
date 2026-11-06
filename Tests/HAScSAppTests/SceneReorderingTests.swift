@@ -11,23 +11,28 @@ private final class TestCredentials: CredentialStorage {
 
 private actor SceneTransport: HTTPTransport {
     private var requests: [URLRequest] = []
+    let sceneCount: Int
+    let unavailable: Set<String>
+
+    init(sceneCount: Int = 3, unavailable: Set<String> = ["charlie"]) {
+        self.sceneCount = sceneCount
+        self.unavailable = unavailable
+    }
     func data(for request: URLRequest) async throws -> (Data, URLResponse) {
         requests.append(request)
-        let payload = request.httpMethod == "GET" ? """
-        [
-          {"entity_id":"scene.charlie","state":"unavailable","attributes":{}},
-          {"entity_id":"scene.alpha","state":"unknown","attributes":{}},
-          {"entity_id":"scene.beta","state":"unknown","attributes":{}}
-        ]
-        """ : "[]"
-        return (Data(payload.utf8), HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
+        let names = ["charlie", "alpha", "beta", "delta", "echo", "foxtrot", "golf", "hotel", "india"]
+        let objects: [[String: Any]] = request.httpMethod == "GET" ? names.prefix(sceneCount).map { name in
+            ["entity_id": "scene.\(name)", "state": unavailable.contains(name) ? "unavailable" : "unknown", "attributes": [:]]
+        } : []
+        return (try JSONSerialization.data(withJSONObject: objects),
+                HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
     }
     func captured() -> [URLRequest] { requests }
 }
 
 @MainActor
 final class SceneReorderingTests: XCTestCase {
-    private func fixture() throws -> (SceneStore, UserDefaults, String, SceneTransport) {
+    private func fixture(sceneCount: Int = 3, unavailable: Set<String> = ["charlie"]) throws -> (SceneStore, UserDefaults, String, SceneTransport) {
         let suite = "io.bobuk.HAScS.tests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defaults.set([String: Int](), forKey: "sceneAssignments.v1")
@@ -37,7 +42,7 @@ final class SceneReorderingTests: XCTestCase {
             XCTFail("Must not read legacy credentials")
             throw ConfigurationError.notFound
         }
-        let transport = SceneTransport()
+        let transport = SceneTransport(sceneCount: sceneCount, unavailable: unavailable)
         return (SceneStore(defaults: defaults, configuration: repository, transport: transport), defaults, suite, transport)
     }
 
@@ -106,19 +111,79 @@ final class SceneReorderingTests: XCTestCase {
         XCTAssertFalse(store.moveScene("scene.beta", toPosition: 0)) // not in edit mode
         store.beginReordering()
         store.selectForReordering(3) // unavailable scenes can still be moved
-        store.moveSelectedScene(-1)
-        store.moveSelectedScene(-1)
+        store.moveSelectedScene(.up)
         let atStart = store.slots
-        store.moveSelectedScene(-1)
+        store.moveSelectedScene(.left)
         XCTAssertEqual(store.slots, atStart)
         XCTAssertEqual(store.slots.first?.id, "scene.charlie")
         XCTAssertEqual(store.selectedNumber, 1)
         XCTAssertFalse(store.moveScene("scene.foreign", toPosition: 0))
         XCTAssertFalse(store.moveScene("scene.alpha", toPosition: 99))
-        store.moveSelection(1)
+        store.moveSelection(.right)
         XCTAssertEqual(store.selectedNumber, 2)
         store.finishReordering(save: true)
         XCTAssertEqual(store.selectedNumber, 2)
+    }
+
+    func testSelectionNavigatesRowsAndRetainsColumnWithoutSendingRequests() async throws {
+        let (store, defaults, suite, transport) = try fixture(sceneCount: 9, unavailable: [])
+        defer { defaults.removePersistentDomain(forName: suite) }
+        await store.refresh()
+        store.moveSelection(.right) // 1 -> 2
+        store.moveSelection(.down) // 2 -> 5
+        XCTAssertEqual(store.selectedNumber, 5)
+        store.moveSelection(.down) // 5 -> 8
+        store.moveSelection(.down) // 8 -> 9, short final row
+        XCTAssertEqual(store.selectedNumber, 9)
+        store.moveSelection(.down) // bottom edge
+        XCTAssertEqual(store.selectedNumber, 9)
+        store.moveSelection(.up) // remember column 3
+        XCTAssertEqual(store.selectedNumber, 8)
+        store.moveSelection(.left) // reset to column 2
+        store.moveSelection(.up) // 7 -> 4
+        store.moveSelection(.up) // 4 -> 1, wide first tile
+        XCTAssertEqual(store.selectedNumber, 1)
+        store.moveSelection(.up) // top edge
+        store.moveSelection(.down) // return to column 2
+        XCTAssertEqual(store.selectedNumber, 4)
+        let requests = await transport.captured()
+        XCTAssertEqual(requests.count, 1)
+        XCTAssertEqual(requests.first?.httpMethod, "GET")
+    }
+
+    func testShiftVerticalMovesKeepSelectedSceneAndCanBeUndone() async throws {
+        let (store, defaults, suite, transport) = try fixture(sceneCount: 9, unavailable: [])
+        defer { defaults.removePersistentDomain(forName: suite) }
+        await store.refresh()
+        let original = store.slots
+        store.beginReordering()
+        store.selectForReordering(4)
+        let selectedID = store.slots[3].id
+        store.moveSelectedScene(.up)
+        XCTAssertEqual(store.selectedNumber, 1)
+        XCTAssertEqual(store.slots[0].id, selectedID)
+        store.moveSelectedScene(.down)
+        XCTAssertEqual(store.selectedNumber, 4)
+        XCTAssertEqual(store.slots, original)
+        store.moveSelectedScene(.down)
+        XCTAssertEqual(store.selectedNumber, 7)
+        XCTAssertEqual(store.slots[6].id, selectedID)
+        store.finishReordering(save: false)
+        XCTAssertEqual(store.slots, original)
+        let requests = await transport.captured()
+        XCTAssertEqual(requests.count, 1)
+    }
+
+    func testNormalNavigationSkipsUnavailableButEditingIncludesThem() async throws {
+        let (store, defaults, suite, _) = try fixture(sceneCount: 9)
+        defer { defaults.removePersistentDomain(forName: suite) }
+        await store.refresh()
+        store.moveSelection(.down) // scene 3 is unavailable; nearest available is 4
+        XCTAssertEqual(store.selectedNumber, 4)
+        store.beginReordering()
+        store.selectForReordering(1)
+        store.moveSelection(.down)
+        XCTAssertEqual(store.selectedNumber, 3)
     }
 
     func testConfigurationChangeDiscardsEditingState() async throws {

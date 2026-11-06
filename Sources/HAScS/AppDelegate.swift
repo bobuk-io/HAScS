@@ -196,22 +196,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 if !self.store.isReordering { self.activate(number) }
                 return nil
             }
+            let direction: SceneGridDirection? = switch event.keyCode {
+            case 123: .left
+            case 124: .right
+            case 126: .up
+            case 125: .down
+            default: nil
+            }
+            if let direction {
+                if self.store.isReordering && modifiers.contains(.shift) { self.store.moveSelectedScene(direction) }
+                else { self.store.moveSelection(direction) }
+                return nil
+            }
             if self.store.isReordering {
                 switch event.keyCode {
                 case 53: self.store.finishReordering(save: false); return nil
                 case 36, 76: self.store.finishReordering(save: true); return nil
-                case 126, 123, 125, 124:
-                    let direction = (event.keyCode == 126 || event.keyCode == 123) ? -1 : 1
-                    if modifiers.contains(.shift) { self.store.moveSelectedScene(direction) }
-                    else { self.store.moveSelection(direction) }
-                    return nil
                 default: return event
                 }
             }
             switch event.keyCode {
             case 53: self.hidePanel(); return nil // Escape
-            case 126, 123: self.store.moveSelection(-1); return nil // up / left
-            case 125, 124: self.store.moveSelection(1); return nil // down / right
             case 36, 76:
                 if let number = self.store.selectedNumber { self.activate(number) }
                 return nil

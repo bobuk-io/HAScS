@@ -25,7 +25,7 @@
 "Reorder" = "Порядок";
 "Reorder scenes" = "Змінити порядок сцен";
 "Drag tiles to reorder. Scenes will not run." = "Перетягуйте плитки. Сцени не запускатимуться.";
-"Shift + ←/→ move" = "Shift + ←/→ перемістити";
+"Shift + arrows move" = "Shift + стрілки — перемістити";
 "Select to move with Shift and arrow keys" = "Виберіть, потім переміщуйте за допомогою Shift і стрілок";
 "Move earlier" = "Перемістити раніше";
 "Move later" = "Перемістити пізніше";
