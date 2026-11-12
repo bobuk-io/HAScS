@@ -11,3 +11,4 @@
 - `Scripts/release.sh` prepares and installs the release. `Scripts/install.sh` can install an already notarized app without rebuilding. Verify that the running process is from `/Applications`, not `build/` or `dist/`.
 - Never activate real Home Assistant scenes during validation. Use a local mock server. Do not open the real scene panel for unattended testing: it immediately accepts number keys.
 - Keep HA credentials in Keychain. Never commit or upload `.env`, credentials, signing keys or notarization credentials. Release artifacts must pass `Scripts/check_release_privacy.swift`; do not ship local home/build paths.
+- After every release, update the HAScS pages on the landing site (`~/GitHub/bobuk.io/landing`) when the release needs it. See `../AGENTS.md`.
