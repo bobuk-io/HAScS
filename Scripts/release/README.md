@@ -1,6 +1,6 @@
 # bobuk.io release kit
 
-One release scheme for every native `bobuk-io` app (Ting, Splash Finish, HAScS, Lowkey).
+One release scheme for every native `bobuk-io` app (Ting, Splash Finish, HAScS, lowkey).
 The files in `Scripts/release/` and the four entry points in `Scripts/` are identical in every
 repository. The canonical copy is `ting/Scripts/release`; copy changes from there with
 `Scripts/release/sync_kit.sh ../<app>` and check the copies with `--check`. Do not edit a

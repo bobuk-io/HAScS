@@ -14,6 +14,9 @@
 "Last request · %@" = "Last request · %@";
 "1–9 run" = "1–9 run";
 "↑↓ select   ↵ run" = "↑↓ select   ↵ run";
+"select" = "select";
+"run" = "run";
+"close" = "close";
 "esc  close" = "esc  close";
 "Close remote" = "Close remote";
 "Connecting…" = "Connecting…";

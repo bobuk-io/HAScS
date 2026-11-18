@@ -9,10 +9,11 @@ let package = Package(
         .library(name: "HAScSCore", targets: ["HAScSCore"]),
         .executable(name: "HAScS", targets: ["HAScS"]),
     ],
+    dependencies: [.package(path: "Vendor/BobukKit")],
     targets: [
         .target(name: "HAScSCore", resources: [.process("Resources")]),
-        .executableTarget(name: "HAScS", dependencies: ["HAScSCore"]),
+        .executableTarget(name: "HAScS", dependencies: ["HAScSCore", .product(name: "BobukUI", package: "BobukKit")]),
         .testTarget(name: "HAScSCoreTests", dependencies: ["HAScSCore"]),
-        .testTarget(name: "HAScSAppTests", dependencies: ["HAScS", "HAScSCore"]),
+        .testTarget(name: "HAScSAppTests", dependencies: ["HAScS", "HAScSCore", .product(name: "BobukUI", package: "BobukKit")]),
     ]
 )

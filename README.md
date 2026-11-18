@@ -82,7 +82,16 @@ assignments are migrated from earlier local identifiers without changing them.
 
 ## Develop
 
-Use Xcode or Command Line Tools with **Swift 6 or later** on macOS:
+HAScS uses [BobukKit](https://github.com/bobuk-io/BobukKit) for localized
+shortcut hints in the footer. Scene tiles, grid navigation, reordering, the close
+button and activation remain app-owned. English, Ukrainian and Russian are retained.
+
+The self-contained package is in `Vendor/BobukKit`. Edit shared components only
+in `~/GitHub/bobuk.io/BobukKit`, then run its `Scripts/sync.sh` and
+`Scripts/sync.sh --check` for all registered apps. Release EXTRA_TESTS verifies
+the snapshot hashes and runs kit tests without a separate upstream checkout.
+
+Use Xcode or Command Line Tools with **Swift 6.2 or later** on macOS:
 
 ```sh
 swift build

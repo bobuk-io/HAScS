@@ -1,5 +1,6 @@
 import SwiftUI
 import HAScSCore
+import BobukUI
 
 private enum RemoteStyle {
     static let featured = Color(red: 0.25, green: 0.30, blue: 0.25)
@@ -246,8 +247,10 @@ struct ScenePanelView: View {
                         Text("1–9 run", bundle: L10n.bundle)
                     }
                     Spacer()
-                    Text("↑↓ select   ↵ run", bundle: L10n.bundle)
-                    Spacer()
+                    ShortcutFooter([
+                        .init("↑↓", L10n.string("select")),
+                        .init("↵", L10n.string("run")),
+                    ], palette: pickerPalette)
                     Button(action: close) { Text("esc  close", bundle: L10n.bundle) }.buttonStyle(.plain)
                         .accessibilityLabel(Text("Close remote", bundle: L10n.bundle))
                 }
@@ -256,6 +259,12 @@ struct ScenePanelView: View {
             .padding(.horizontal, 25)
             .frame(height: 44)
         }
+    }
+
+    private var pickerPalette: PickerPalette {
+        PickerPalette(surface: NSColor.windowBackgroundColor, text: NSColor.labelColor,
+                      secondary: NSColor.secondaryLabelColor, accent: NSColor(RemoteStyle.accent),
+                      border: NSColor.separatorColor, badgeInk: NSColor.labelColor)
     }
 
     private var statusLabel: LocalizedStringKey {
