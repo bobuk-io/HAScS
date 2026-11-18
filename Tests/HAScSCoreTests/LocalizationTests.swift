@@ -42,6 +42,19 @@ final class LocalizationTests: XCTestCase {
         }
     }
 
+    func testPanelHintAsksForANumber() throws {
+        let expected = [
+            ("en", "Choose a scene or press a number"),
+            ("uk", "Виберіть сцену або натисніть номер"),
+            ("ru", "Выберите сцену или нажмите номер"),
+        ]
+        for (code, hint) in expected {
+            let bundle = try languageBundle(code)
+            XCTAssertEqual(String(localized: "Choose a scene or press a number", bundle: bundle,
+                                  locale: Locale(identifier: code)), hint)
+        }
+    }
+
     func testSceneCountPluralForms() throws {
         let expected: [String: [String]] = [
             "en": ["1 scene", "2 scenes", "5 scenes", "11 scenes", "21 scenes"],
