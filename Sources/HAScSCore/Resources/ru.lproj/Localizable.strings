@@ -1,6 +1,6 @@
 /* Русская локализация HAScS. Названия сцен из Home Assistant не переводятся. */
 "Home scenes" = "Сцены дома";
-"Choose a scene or press a number" = "Выберите сцену или нажмите цифру";
+"Choose a scene or press a number" = "Выберите сцену или нажмите номер";
 "Home Assistant scene remote" = "Пульт сцен Home Assistant";
 "Home Assistant settings" = "Настройки Home Assistant";
 "Loading scenes…" = "Загружаем сцены…";
