@@ -5,8 +5,9 @@ files retain their upstream MIT license:
 
 - `Scripts/package_app.sh`: adapted from
   `macos-spm-app-packaging/assets/templates/package_app.sh`.
-- `Scripts/release.sh`: adapted from the same skill's
-  `assets/templates/sign-and-notarize.sh` workflow.
+- `Scripts/release/build.sh` and `Scripts/release/install.sh` (the shared release
+  kit): adapted from the same skill's `assets/templates/sign-and-notarize.sh`
+  workflow.
 
 Source: <https://github.com/dimillian/skills>
 

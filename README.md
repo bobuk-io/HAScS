@@ -109,23 +109,26 @@ If the vector artwork changes, re-render the PNG master before packaging.
 
 ## Release
 
-Configure a Developer ID Application signing identity and a saved `notarytool`
-Keychain profile, then run on a trusted maintainer workstation:
+Releases use the shared bobuk.io release kit in [`Scripts/release`](Scripts/release/README.md),
+the same scheme as Ting and Splash Finish; app facts live in `release.env`. Write
+`docs/releases/v<next version>.md`, commit the landing copy for the release, then run on a
+trusted maintainer workstation:
 
 ```sh
 APP_IDENTITY='Developer ID Application: Your Name (TEAMID)' \
-NOTARY_PROFILE=HAScS \
-./Scripts/release.sh
+NOTARY_PROFILE=your-notary-profile \
+./Scripts/release_next.sh
 ```
 
-The script builds a universal app, removes debug-map paths, checks embedded
-resources and local-path leakage, signs and notarizes it, and staples the ticket.
-The ZIP and `SHA256SUMS.txt` are written to `dist/`.
-
-It then **installs the release at `/Applications/HAScS.app` and restarts it**. The
-previous installation is retained until the replacement starts successfully; an
-app that refuses to quit is not force-killed. Existing credentials remain in
-Keychain. Signing keys, `.env` and notarization credentials are never bundled.
+It raises the patch version and `BUILD_NUMBER`, runs the tests in the background while it
+builds a universal app, removes debug-map paths, checks embedded resources and local-path
+leakage, signs, notarizes and staples it, and writes the ZIP and `SHA256SUMS.txt` to
+`dist/`. It then **installs the release at `/Applications/HAScS.app` and restarts it**,
+commits and pushes, publishes the GitHub release and deploys the landing site. The previous
+installation is retained until the replacement starts successfully; an app that refuses to
+quit is not force-killed. Existing credentials remain in Keychain. Signing keys, `.env` and
+notarization credentials are never bundled. After a failure, run the same command again.
+`./Scripts/release/doctor.sh` checks readiness without changing anything.
 
 Install an already prepared notarized build without rebuilding:
 
@@ -137,11 +140,8 @@ Validate the app without launching it or contacting HA:
 
 ```sh
 swift Scripts/check_bundle.swift dist/HAScS.app
-swift Scripts/check_release_privacy.swift dist/HAScS.app
+swift Scripts/release/check_privacy.swift dist/HAScS.app
 ```
-
-Upload the verified ZIP and checksum to GitHub Releases with a matching version
-tag. Release tasks are complete only after publication, installation and restart.
 
 ## License
 
