@@ -22,6 +22,7 @@ public struct PickerPalette {
 
 public enum PickerMetrics {
     public static let rowHeight: CGFloat = 40
+    public static let searchFieldHeight: CGFloat = 30
     public static let rowInset: CGFloat = 8
     public static let rowRadius: CGFloat = 6
     public static let columnSpacing: CGFloat = 10

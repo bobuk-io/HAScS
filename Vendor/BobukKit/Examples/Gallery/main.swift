@@ -11,7 +11,8 @@ import BobukUI
     let aliases = ["HA", "NOTES", "A-VERY-LONG-ALIAS"]
     let badgeWidth = PickerMetrics.badgeWidth(for: aliases)
     let content = VStack(alignment: .leading, spacing: 0) {
-        Text("Alias or address").font(.system(size: 18)).padding(16)
+        PickerSearchField(text: .constant("notes"), placeholder: "Alias or address",
+                          accessibilityLabel: "Search demo items", palette: palette).padding(16)
         Divider()
         VStack(spacing: 0) {
             ForEach(Array(aliases.enumerated()), id: \.element) { index, alias in

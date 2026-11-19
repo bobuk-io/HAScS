@@ -10,6 +10,10 @@ Shared macOS components for bobuk-io apps. Canonical checkout:
 
 - `PickerRow`: identical row height, insets, hover and selected backgrounds.
   It does not own a button, search, focus or actions; retain native app controls.
+- `PickerSearchField`: native live search input with standard editing/cancel behavior,
+  palette-owned text colors and shared height. It writes a binding; apps own filtering
+  and results. It saves no recent searches, never takes focus automatically and does not
+  intercept keyboard commands such as Cmd-W.
 - `PickerBadge`: centered monospaced text in a fixed column. Compute
   `PickerMetrics.badgeWidth(for:)` **once for the complete list**, not per row.
   Extremely long aliases truncate with a full-text tooltip. History uses the same column.
@@ -44,7 +48,7 @@ Scripts/test_sync.sh            # offline sync safety tests
 ```
 
 `consumers.txt` paths are relative to this checkout. Consumers are Ting
-(launcha, selecta and Clipbawd), lowkey (address/alias picker), Splash Finish
+(launcha, selecta, Clipbawd and Settings), lowkey (address/alias picker), Splash Finish
 (panel frame and shortcut footer) and HAScS (localized shortcut footer).
 Splash Finish retains its variable-height notification cards and separate link/dismiss
 actions; HAScS retains its scene tiles and grid navigation. Ahti is not a consumer.
@@ -65,7 +69,7 @@ No hosted CI or remote package resolution is required.
 
 ## State/QA contract
 
-The offline gallery renders light/dark palettes at 340 and 560 points, selected
+The offline gallery renders a real native search input, light/dark palettes at 340 and 560 points, selected
 and unselected rows, history, long aliases, and a wrapping footer. It uses only
 invisible windows and demo data; it does not activate an app or read settings.
 Tests cover selection boundaries, optional selection, equal badge geometry and
