@@ -2,10 +2,16 @@ import SwiftUI
 import HAScSCore
 import BobukUI
 
-private enum RemoteStyle {
+enum RemoteStyle {
     static let featured = Color(red: 0.25, green: 0.30, blue: 0.25)
     static let featuredText = Color(red: 0.96, green: 0.96, blue: 0.92)
     static let accent = Color(red: 0.70, green: 0.36, blue: 0.22)
+    /// System colors with the HAScS accent: the panel's hints and the Settings window chrome.
+    static var palette: PickerPalette {
+        PickerPalette(surface: NSColor.windowBackgroundColor, text: NSColor.labelColor,
+                      secondary: NSColor.secondaryLabelColor, accent: NSColor(accent),
+                      border: NSColor.separatorColor, badgeInk: NSColor.labelColor)
+    }
 }
 
 struct ScenePanelView: View {
@@ -250,7 +256,7 @@ struct ScenePanelView: View {
                     ShortcutFooter([
                         .init("↑↓", L10n.string("select")),
                         .init("↵", L10n.string("run")),
-                    ], palette: pickerPalette)
+                    ], palette: RemoteStyle.palette)
                     Button(action: close) { Text("esc  close", bundle: L10n.bundle) }.buttonStyle(.plain)
                         .accessibilityLabel(Text("Close remote", bundle: L10n.bundle))
                 }
@@ -261,11 +267,6 @@ struct ScenePanelView: View {
         }
     }
 
-    private var pickerPalette: PickerPalette {
-        PickerPalette(surface: NSColor.windowBackgroundColor, text: NSColor.labelColor,
-                      secondary: NSColor.secondaryLabelColor, accent: NSColor(RemoteStyle.accent),
-                      border: NSColor.separatorColor, badgeInk: NSColor.labelColor)
-    }
 
     private var statusLabel: LocalizedStringKey {
         switch store.status {

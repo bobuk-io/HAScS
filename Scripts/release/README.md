@@ -1,10 +1,12 @@
 # bobuk.io release kit
 
 One release scheme for every native `bobuk-io` app (Ting, Splash Finish, HAScS, lowkey).
-The files in `Scripts/release/` and the four entry points in `Scripts/` are identical in every
-repository. The canonical copy is `ting/Scripts/release`; copy changes from there with
-`Scripts/release/sync_kit.sh ../<app>` and check the copies with `--check`. Do not edit a
-copy in another repository.
+The files in `Scripts/release/` and the five entry points in `Scripts/` are identical in every
+repository. The canonical copy is `BobukKit/ReleaseKit` (`release/` and `entry/`), next to the
+shared Swift package. Change it there, run `ReleaseKit/release/test_kit.sh`, then
+`BobukKit/Scripts/sync.sh` copies it into every app listed in `BobukKit/consumers.txt`, and
+`BobukKit/Scripts/sync.sh --check <app>` finds drift. `.bobukkit-release` marks a managed copy.
+Never edit the copy in an app repository.
 
 ## Commands
 
@@ -16,6 +18,7 @@ copy in another repository.
 | `Scripts/install.sh [App.app]` | Install an already notarized app in `INSTALL_DIR` and restart it. |
 | `Scripts/release/landing.sh` | Deploy bobuk.io, commit and push the landing checkout, check the page and the live feed. |
 | `Scripts/release/homebrew.sh [--publish]` | Print or publish the cask from `Scripts/homebrew_cask.rb`. |
+| `Scripts/package_app.sh [debug|release]` | Build and sign the app bundle (see Packaging). |
 | `Scripts/release/doctor.sh` | Read-only readiness check: configuration, tools, identity, notary profile, Sparkle key, GitHub, landing. |
 | `Scripts/release/test_kit.sh` | Offline tests of the kit with mocks. Safe to run any time. |
 
@@ -77,13 +80,33 @@ two keys are required.
 ## What every app provides
 
 - `version.env` with `MARKETING_VERSION=X.Y.Z` and `BUILD_NUMBER=N`.
-- `Scripts/package_app.sh [debug|release]` that honours `ARCHES` (space separated),
-  `APP_OUTPUT_DIR` (default `build/`), `SIGNING_MODE=adhoc|developer-id` and `APP_IDENTITY`,
-  writes `$APP_OUTPUT_DIR/$APP_NAME.app`, builds each architecture with
-  `--build-system native`, strips debug maps (`strip -S`) in release builds, and signs with the
-  Hardened Runtime and a secure timestamp for Developer ID.
 - `docs/releases/v<version>.md` for every published release.
 - `Scripts/homebrew_cask.rb` with `@VERSION@` and `@SHA256@` when `HOMEBREW_CASK` is set.
+- `Assets/AppIcon.png` (1024×1024), or its own renderer in `PACKAGE_ICON`.
+- Optional `Scripts/Info.extra.plist` (more Info.plist entries; `@BUNDLE_ID@` is replaced) and
+  `Scripts/App.entitlements`.
+
+## Packaging
+
+`Scripts/package_app.sh [debug|release]` is a kit entry point that runs `package.sh`. It honours
+`ARCHES` (space separated), `APP_OUTPUT_DIR` (default `build/`), `SIGNING_MODE=adhoc|developer-id`
+and `APP_IDENTITY`, writes `$APP_OUTPUT_DIR/$APP_NAME.app`, builds each architecture with
+`--build-system native`, strips debug maps (`strip -S`) in release builds, embeds SwiftPM
+frameworks (Sparkle) and resource bundles, and signs inside out with the Hardened Runtime and a
+secure timestamp for Developer ID. Release builds of apps with `SPARKLE_PUBLIC_KEY` and
+`LANDING_SLUG` get `SUFeedURL` (`https://bobuk.io/apps/<slug>/appcast.xml`) and `SUPublicEDKey`.
+
+| release.env key | Meaning | Default |
+| --- | --- | --- |
+| `PACKAGE_ARCHES` | Architectures when `ARCHES` is unset | this Mac's |
+| `PACKAGE_MENU_BAR` | `1` sets `LSUIElement` (menu-bar app without a Dock icon) | `1` |
+| `PACKAGE_CATEGORY` | `LSApplicationCategoryType` | `public.app-category.utilities` |
+| `PACKAGE_HELPERS` | More executables: `product:folder[:codesign-identifier]`, space separated; folder under `Contents` | none |
+| `PACKAGE_RESOURCES` | Files copied into `Contents/Resources`; empty for none | `LICENSE THIRD_PARTY_NOTICES.md` |
+| `PACKAGE_ICON` | Own icon renderer: a `.swift` script gets the output folder, another executable the output file | `Scripts/release/icon.sh Assets/AppIcon.png` |
+| `PACKAGE_REFUSE_RUNNING` | `1` refuses to replace a running build | `0` |
+| `PACKAGE_SPARKLE_IN_DEBUG` | `1` also gives debug builds the update feed | `0` |
+| `MACOS_MIN_VERSION` | `LSMinimumSystemVersion` | `14.0` |
 
 ## Rules
 

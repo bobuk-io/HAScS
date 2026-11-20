@@ -1,0 +1,7 @@
+    <key>CFBundleLocalizations</key><array><string>en</string><string>uk</string><string>ru</string></array>
+    <key>CFBundleURLTypes</key>
+    <array><dict>
+        <key>CFBundleURLName</key><string>@BUNDLE_ID@.scenes</string>
+        <key>CFBundleURLSchemes</key><array><string>hascs</string></array>
+    </dict></array>
+    <key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict>

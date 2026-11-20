@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import BobukUI
+import BobukUpdates
 
 // Offline, invisible windows: no activation, live websites, key presses or user settings.
 @MainActor func render(width: CGFloat, dark: Bool, output: URL) throws {
@@ -59,6 +60,44 @@ import BobukUI
     print(output.path)
 }
 
+/// A window in the shared shell: accent, strip with close (left) and app buttons (right), body.
+@MainActor func renderWindow(dark: Bool, output: URL) throws {
+    let palette = PickerPalette.bobukAmber
+    let back = StripButton(glyph: .back, label: "Back · ⌘←")
+    let start = StripButton(glyph: .start, label: "Start page")
+    let forward = StripButton(glyph: .forward, label: "Forward · ⌘→")
+    forward.isEnabled = false
+    let window = ChromeWindow(contentRect: NSRect(x: 0, y: 0, width: 560, height: 300), style: palette.chromeStyle,
+                              trailing: [back, start, forward], showsTitle: true)
+    window.title = "Demo Settings"
+    window.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+    window.setContent(VStack(alignment: .leading, spacing: 12) {
+        MonoLabel("General").foregroundStyle(Color(nsColor: palette.secondary))
+        Text("Window controls live in the strip. Content never draws its own close button.")
+            .foregroundStyle(Color(nsColor: palette.text))
+        HStack(spacing: 4) {
+            ForEach(Glyph.allCases, id: \.self) { glyph in
+                GlyphImage(glyph, size: 14).foregroundStyle(Color(nsColor: palette.text)).frame(width: 24, height: 24)
+            }
+        }
+        HStack {
+            Button("Cancel") {}.buttonStyle(QuietButtonStyle(palette: palette))
+            Button("Save") {}.buttonStyle(QuietButtonStyle(palette: palette, prominent: true))
+            GlyphButton(.close, label: "Dismiss", palette: palette) {}
+        }
+        Spacer()
+    }.padding(20).frame(maxWidth: .infinity, alignment: .leading).background(Color(nsColor: palette.surface)))
+    guard let view = window.contentView else { return }
+    view.layoutSubtreeIfNeeded()
+    view.displayIfNeeded()
+    guard let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { throw CocoaError(.fileWriteUnknown) }
+    view.cacheDisplay(in: view.bounds, to: bitmap)
+    guard let data = bitmap.representation(using: .png, properties: [:]) else { throw CocoaError(.fileWriteUnknown) }
+    try data.write(to: output)
+    window.close()
+    print(output.path)
+}
+
 let output = URL(fileURLWithPath: CommandLine.arguments.dropFirst().first ?? "/tmp/bobukkit-gallery", isDirectory: true)
 try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
 try MainActor.assumeIsolated {
@@ -67,5 +106,6 @@ try MainActor.assumeIsolated {
         for width in [CGFloat(340), 560] {
             try render(width: width, dark: dark, output: output.appendingPathComponent("picker-\(dark ? "dark" : "light")-\(Int(width)).png"))
         }
+        try renderWindow(dark: dark, output: output.appendingPathComponent("window-\(dark ? "dark" : "light").png"))
     }
 }

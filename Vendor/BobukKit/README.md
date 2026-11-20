@@ -3,82 +3,116 @@
 The name is a Ukrainian pun: **Бобук Кіт** — “Bobuk the Cat”. Bobuk is the
 author's name, and Ukrainian **кіт** means “cat”. A toolkit with a cat in its name. :)
 
-Shared macOS components for bobuk-io apps. Canonical checkout:
-`~/GitHub/bobuk.io/BobukKit`. Requires macOS 14 and Swift 6.2.
+The shared library of the native bobuk-io apps (Ting, lowkey, Splash Finish, HAScS): their
+window shell, panels, controls, system services, Homebrew updates and the release kit.
+Canonical checkout: `~/GitHub/bobuk.io/BobukKit`. Requires macOS 14 and Swift 6.2.
+**Before you write a window, a panel, a button style, a hotkey, a file store, a process runner
+or an update flow in an app, find it in the catalog below.** If it is missing and two apps
+need it, add it here, not to the app. Agents: read `AGENTS.md`.
 
-## BobukUI
+## Catalog: task → component
 
-- `PickerRow`: identical row height, insets, hover and selected backgrounds.
-  It does not own a button, search, focus or actions; retain native app controls.
-- `PickerSearchField`: native live search input with standard editing/cancel behavior,
-  palette-owned text colors and shared height. It writes a binding; apps own filtering
-  and results. It saves no recent searches, never takes focus automatically and does not
-  intercept keyboard commands such as Cmd-W.
-- `PickerBadge`: centered monospaced text in a fixed column. Compute
-  `PickerMetrics.badgeWidth(for:)` **once for the complete list**, not per row.
-  Extremely long aliases truncate with a full-text tooltip. History uses the same column.
-- `PickerSurfaceView` / `.pickerPanel(palette:)`: one AppKit surface renderer for
-  borderless panels and SwiftUI cards, with a clipped rounded frame and accent rule.
-  Native titled browser windows, OS resizing and shadows remain application-owned.
-- `ShortcutFooter`: semantic shortcut/action groups that wrap together, not a long
-  pre-spaced string. Hints do not register keyboard handlers. All commands remain
-  in the application's responder chain. Group identity is the unique key/action pair.
-- `PickerSelection`: non-wrapping, clamped movement. Optional selection lets the
-  first Up return to typed input, as in lowkey; Ting keeps the first result selected.
+| Task | Use | Product |
+| --- | --- | --- |
+| Any app window (Settings, Welcome, permissions, update progress, browser) | `ChromeWindow`: accent line, strip with close on the left, `body` for content; `setContent(view)` / `ChromeWindow.hosting(view)` for SwiftUI (no safe-area offset); `contentSize(forBody:)`; ⌘W closes and ⌘C/⌘V/⌘Z reach text fields even without an Edit menu | BobukUI |
+| A close, back, reload… button of a window | `StripButton(glyph:label:)` in `ChromeWindow(leading:trailing:)` or `strip.addTrailing` | BobukUI |
+| Show/close one window, remember its frame, release content on close | `HostedWindowController` (`prepare()` builds without showing, `sizesToFitContent`) | BobukUI |
+| SwiftUI content that must close or read its own window | `.windowReference(WindowReference())` | BobukUI |
+| A floating panel (launcher, inbox, prompt, HUD) | `BobukPanel(kind:)` with `onDismiss`, `onCommandKey`, `suspendDismissal()`; `swallowsOtherCommandKeys = false` when SwiftUI content has its own ⌘ shortcuts | BobukUI |
+| ⌘C/⌘V/⌘Z in a non-activating panel, ⌘Q must not quit | built into `BobukPanel`; `EditCommand.classify` | BobukUI |
+| Which screen and where a panel appears | `window.place(size:anchor:)`, `Screens.underPointer`, `PanelPlacement` | BobukUI / BobukCore |
+| Grow a panel with its content, top edge fixed | `window.fitHeight(to:)`, `PanelPlacement.resize` | BobukUI / BobukCore |
+| Line icons (close, back, lock, reload, plus, check…) | `Glyph`, `GlyphView` (AppKit), `GlyphImage` (SwiftUI) | BobukUI |
+| An icon action inside content (dismiss a card, remove a row) | `GlyphButton` (SwiftUI; square or `width:height:glyphSize:hoverFill:`, separate `help:`) | BobukUI |
+| Picker rows, badges, search field, shortcut hints, panel frame | `PickerRow`, `PickerBadge`, `PickerSearchField`, `ShortcutFooter`, `.pickerPanel`, `PickerSurfaceView` | BobukUI |
+| Light/dark colors from hex, the shared amber palette | `NSColor.dynamic(light:dark:)`, `BobukColors`, `PickerPalette.bobukAmber` | BobukUI |
+| App-wide Light/Dark/System setting | `AppearanceChoice` (`apply()`, `stored(in:key:)`) | BobukUI |
+| Small bordered or accent button, mono caps label | `QuietButtonStyle(palette:prominent:)`, `MonoLabel` | BobukUI |
+| A short message near the top of the screen | `ToastController` | BobukUI |
+| Global hotkey (no Accessibility permission) | `GlobalHotkeyCenter(signature:)` | BobukSystem |
+| Hotkey strings `option+shift+cmd+f`, key names, modifier taps | `Hotkey`, `KeyCodes`, `ModifierSet`, `ModifierTapDetector` | BobukCore |
+| Named key codes instead of 53/36/126/43, layout-independent digits | `VirtualKey` | BobukCore |
+| The Latin key of an event on a Russian/Ukrainian layout | `KeyTranslator.latin`, `KeyEquivalent.latin(of:)` | BobukSystem / BobukUI |
+| Text typed on the wrong layout (ыфафкш → safari) | `KeyboardLayoutSwap.variants(of:)` | BobukCore |
+| Only one shortcut recorder at a time, hotkeys off while recording | `HotkeyRecordingGate` | BobukSystem |
+| Launch at login | `LoginItem` | BobukSystem |
+| Accessibility permission | `AccessibilityPermission` | BobukSystem |
+| Bring an accessory app to the front | `AppActivation.activate()` (never `activate(ignoringOtherApps:)`) | BobukSystem |
+| Secrets | `KeychainItem(service:account:)` | BobukSystem |
+| Reload when a file or a folder of files changes on disk | `FileWatcher(url:)`, `FileWatcher(folder:)` | BobukSystem |
+| Config/support paths with one env override for tests (a file like `TING_CONFIG` or a folder like `SPLASH_FINISH_HOME`) | `AppPaths` (`config`, `file`, `dataFile`, `companion`) | BobukCore |
+| One Codable value in a JSON file, explicit corrupt-file policy | `JSONFileStore` | BobukCore |
+| Atomic writes that refuse symlinks; single-instance lock | `SafeFile.write`, `FileLock` | BobukCore |
+| Most-recent-first history | `RecentList` | BobukCore |
+| Run a program with time limit, output cap and cancel | `ChildProcess.run` | BobukCore |
+| App ↔ command-line companion IPC | `MessagePortServer`, `MessagePortClient` (`sendTimeout`, `waitForServer(keepWaiting:)`) | BobukCore |
+| The real `.app`, version, resource bundles without `Bundle.module` (also under `swift test`) | `AppBundle` | BobukCore |
+| Logging | `BobukLog.logger("category")` | BobukCore |
+| Sparkle or Homebrew updates, the brew progress window | `UpdateService.detect(app:makeSparkle:)`, `HomebrewLaunch` | BobukUpdates |
+| Test folders, fake executables and `.app` bundles, isolated defaults | `TemporaryDirectory`, `IsolatedDefaults`, `VersionFile` | BobukTestSupport |
+| Signing, notarization, GitHub release, appcast, cask, landing | `ReleaseKit/` (copied to `Scripts/release`) | scripts |
 
-Applications provide `PickerPalette` at the current window's theme boundary.
-Palette roles are surface, text, secondary text, accent, frame border and badge ink.
-The kit owns shared geometry, not app branding, WebKit profiles or appearance storage.
-Use native Buttons and accessibility labels/hints on each action. Decorative icons
-should be hidden from accessibility. Selection traits belong to the action, not
-its surrounding layout. No automatic focus/activation, keyboard synthesis or animation.
+## Rules of the shell
+
+- **Window controls live in the strip.** A window has exactly one close control: the strip's
+  close button, `performClose`, ⌘W. Never draw an `xmark` button inside a window's content;
+  never hand-roll a borderless window to look like `ChromeWindow`.
+- **Windows** use a 2-point accent and a 20-point strip (`ChromeMetrics`). **Panels** use the
+  picker surface: 14-point corners, a 3-point accent, a 1-point border (`PickerMetrics`). Panels
+  have no close button: Esc, ⌘W and focus loss close them (`BobukPanel`).
+- Colors come from the app (`PickerPalette`, `ChromeStyle`); the kit owns geometry and behavior.
+  Identical colors across apps belong in `BobukColors`.
+- Use native Buttons with accessibility labels; strip buttons are accessibility buttons with
+  the shortcut in their label ("Close · ⌘W"). Decorative glyphs are hidden from accessibility.
+- No automatic focus stealing, synthetic key events or animation beyond the chrome color fade.
+
+## Products
+
+| Product | Depends on | Notes |
+| --- | --- | --- |
+| `BobukCore` | Foundation | Safe in *Core targets and command-line tools; no AppKit. |
+| `BobukSystem` | BobukCore, AppKit, Carbon, Security, ServiceManagement | |
+| `BobukUI` | BobukCore, BobukSystem | |
+| `BobukUpdates` | BobukCore, BobukSystem, BobukUI | Sparkle is **not** a dependency: apps that ship Sparkle pass a `SparkleUpdating` adapter. |
+| `BobukTestSupport` | BobukCore | Test targets only; no assertions, works with XCTest and Swift Testing. |
 
 ## Local copies, not remote dependencies
 
-Consumers use `.package(path: "Vendor/BobukKit")`. Builds need neither this checkout
-nor GitHub. Commit the vendored snapshot with each app. Do not edit copies.
+Consumers use `.package(path: "Vendor/BobukKit")`. Builds need neither this checkout nor GitHub.
+Commit the vendored snapshot with each app. Do not edit copies.
 
 ```sh
-Scripts/sync.sh                 # sync all consumers in consumers.txt
+Scripts/sync.sh                 # sync the package and the release kit into all consumers
 Scripts/sync.sh --check         # fail on missing/drifted copies; never write
 Scripts/sync.sh /path/to/app    # explicit consumer, including a fresh checkout
-swift test
-swift run BobukUIGallery /tmp/bobukkit-gallery
+swift test                      # kit tests (no real hotkeys, Keychain items or brew)
+swift run BobukUIGallery /tmp/bobukkit-gallery   # offline renders of panels and windows
 Scripts/test_sync.sh            # offline sync safety tests
+ReleaseKit/release/test_kit.sh  # offline release kit tests
 ```
 
-`consumers.txt` paths are relative to this checkout. Consumers are Ting
-(launcha, selecta, Clipbawd and Settings), lowkey (address/alias picker), Splash Finish
-(panel frame and shortcut footer) and HAScS (localized shortcut footer).
-Splash Finish retains its variable-height notification cards and separate link/dismiss
-actions; HAScS retains its scene tiles and grid navigation. Ahti is not a consumer.
-Snapshot files are
-listed in `MANIFEST.sha256`; `.bobukkit-vendor` marks ownership. Sync refuses an
-unmarked nonempty directory or a symlink rather than deleting app-owned files.
-Only the marked `Vendor/BobukKit` subtree is managed. Cached `.build`/`.swiftpm`
-folders are preserved and excluded from drift comparison. The gallery and tests
-travel with the snapshot, but synchronization scripts remain canonical.
-`Vendor/BobukKit/Scripts/check-vendor.sh` verifies snapshot hashes and runs its
-unit tests without an upstream checkout. All consumer apps run it as a release EXTRA_TESTS
-suite; its independent scratch directory avoids app build/test contention.
+`consumers.txt` paths are relative to this checkout: Ting, lowkey, Splash Finish, HAScS.
+Snapshot files are listed in `MANIFEST.sha256`; `.bobukkit-vendor` marks ownership. Sync
+refuses an unmarked nonempty directory or a symlink rather than deleting app-owned files.
+Cached `.build`/`.swiftpm` folders are preserved and excluded from drift comparison.
+`Vendor/BobukKit/Scripts/check-vendor.sh` verifies snapshot hashes and runs the kit tests
+without an upstream checkout; every app runs it as a release `EXTRA_TESTS` suite.
 
-Before changing a component: edit here, run the relevant kit tests and gallery,
-sync **all** registered consumers, run their focused tests, inspect their actual
-layouts, and commit copies alongside app changes. Run `--check` before committing.
-No hosted CI or remote package resolution is required.
+## Release kit
 
-## State/QA contract
+`ReleaseKit/release` and `ReleaseKit/entry` are the canonical release scripts of every app
+(see `ReleaseKit/release/README.md`). `Scripts/sync.sh` copies them into `<app>/Scripts/release`
+(marked by `.bobukkit-release`) and the five entry points (including `package_app.sh`) into `<app>/Scripts`, for apps with a
+`release.env`. App facts (`release.env`, `version.env`, `Info.extra.plist`, `App.entitlements`, `homebrew_cask.rb`,
+`check_bundle.swift`) stay in the app. `doctor.sh` checks the copies against `../BobukKit`.
 
-The offline gallery renders a real native search input, light/dark palettes at 340 and 560 points, selected
-and unselected rows, history, long aliases, and a wrapping footer. It uses only
-invisible windows and demo data; it does not activate an app or read settings.
-Tests cover selection boundaries, optional selection, equal badge geometry and
-whole-group footer wrapping. App tests retain ownership of search results, row
-actions, profile identity and window lifecycle.
+## Changing the kit
 
-Not included yet: shared release kit, keyboard-layout search, history or Sparkle.
-Those remain in their current projects; this extraction is deliberately UI-only.
+Edit here, add or update tests, run `swift test`, the gallery and `Scripts/test_sync.sh`,
+raise `VERSION`, sync **all** registered consumers, build and run their focused tests, look at
+their actual windows, and commit the copies with the app changes. Run `--check` before
+committing. No hosted CI or remote package resolution is required.
 
 ## License
 
-0BSD, see LICENSE. No external runtime dependencies.
+0BSD, see LICENSE. No external runtime dependencies. The adapted release scripts in `ReleaseKit` keep their MIT license; see THIRD_PARTY_NOTICES.md.

@@ -1,25 +1,16 @@
+import BobukCore
 import Foundation
 
-/// Resolve resources relative to the running app, CLI or XCTest bundle only.
-/// Do not use Bundle.module: SwiftPM's generated accessor embeds the builder's
-/// absolute checkout path, even when that fallback is never used at runtime.
+/// Resolve resources relative to the running app, `swift run` or the loaded XCTest bundle only
+/// (BobukKit's `AppBundle`). Do not use Bundle.module: SwiftPM's generated accessor embeds the
+/// builder's absolute checkout path, even when that fallback is never used at runtime.
 public enum L10n {
     public static let supportedLanguages = ["en", "uk", "ru"]
     public static let bundle: Bundle = {
-        let name = "HAScS_HAScSCore.bundle"
-        for container in [Bundle.main, Bundle(for: LocalizationBundleMarker.self)] {
-            var directories = [container.resourceURL, container.bundleURL,
-                               container.executableURL?.deletingLastPathComponent()].compactMap { $0 }
-            if container.bundleURL.pathExtension == "xctest" {
-                directories.append(container.bundleURL.deletingLastPathComponent())
-            }
-            for directory in directories {
-                if let embedded = Bundle(url: directory.appendingPathComponent(name)) {
-                    return embedded
-                }
-            }
+        guard let bundle = AppBundle.resourceBundle(named: "HAScS_HAScSCore.bundle") else {
+            fatalError("HAScS localization resources are missing from the application.")
         }
-        fatalError("HAScS localization resources are missing from the application.")
+        return bundle
     }()
 
     public static func string(_ key: String.LocalizationValue) -> String {
@@ -42,8 +33,6 @@ public enum L10n {
         String(localized: "\(error) The scene may have run. Check your devices before trying again.", bundle: bundle)
     }
 }
-
-private final class LocalizationBundleMarker: NSObject {}
 
 public enum InterfaceLanguage: String, CaseIterable, Identifiable {
     case system, en, uk, ru

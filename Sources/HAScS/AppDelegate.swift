@@ -1,19 +1,26 @@
 import AppKit
 import SwiftUI
+import BobukCore
+import BobukSystem
+import BobukUI
 import HAScSCore
 
-@MainActor
-final class RemotePanel: NSPanel {
-    override var canBecomeKey: Bool { true }
-    override var canBecomeMain: Bool { true }
+/// Scene keys of the panel.
+enum SceneKeys {
+    /// The scene number of a physical 1–9 key, top row or keypad, with any keyboard layout.
+    /// 0 selects nothing.
+    static func number(forKeyCode keyCode: UInt16) -> Int? {
+        guard let digit = VirtualKey.digit(keyCode), (1...9).contains(digit) else { return nil }
+        return digit
+    }
 }
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate {
     private let store: SceneStore
     private var statusItem: NSStatusItem!
-    private var panel: RemotePanel!
-    private var settingsWindow: NSWindow?
+    private var panel: BobukPanel!
+    private var settings: HostedWindowController!
     private var keyMonitor: Any?
     private var refreshTask: Task<Void, Never>?
     private var presentation = 0
@@ -30,9 +37,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(.accessory)
+        AppActivation.becomeAccessory()
         configureStatusItem()
         configurePanel()
+        configureSettings()
         configureKeyMonitor()
         // One-time, read-only legacy import; errors are displayed on the next
         // panel/settings opening and never fall back to plaintext for requests.
@@ -86,51 +94,49 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     @objc private func openSettings() {
         if panel.isVisible { hidePanel() }
-        if let settingsWindow, settingsWindow.isVisible {
-            NSApp.activate(ignoringOtherApps: true)
-            settingsWindow.makeKeyAndOrderFront(nil)
-            return
-        }
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 540, height: 485),
-                              styleMask: [.titled, .closable], backing: .buffered, defer: false)
-        window.title = L10n.string("HAScS Settings")
-        window.isReleasedWhenClosed = false
-        window.delegate = self
-        window.contentView = NSHostingView(rootView: SettingsView(
-            repository: store.configuration,
-            onSaved: { [weak self] in
-                self?.refreshTask?.cancel()
-                self?.store.invalidateConfiguration()
-                self?.settingsWindow?.close()
-            },
-            onCancel: { [weak self] in self?.settingsWindow?.close() }
-        ))
-        window.center()
-        settingsWindow = window
-        NSApp.activate(ignoringOtherApps: true)
-        window.makeKeyAndOrderFront(nil)
+        settings.show()
     }
 
-    func windowWillClose(_ notification: Notification) {
-        if let window = notification.object as? NSWindow, window === settingsWindow {
-            // Release the SecureField and any unsaved token when the window closes.
-            settingsWindow = nil
-        }
+    /// A fixed-size ChromeWindow whose body fits the 540×485 SettingsView. ⌘C/⌘V/⌘X/⌘A/⌘Z reach
+    /// its fields without an Edit menu (`routesEditCommands`).
+    static func makeSettingsWindow() -> ChromeWindow {
+        let size = ChromeMetrics.windowSize(forBody: NSSize(width: 540, height: 485))
+        let window = ChromeWindow(contentRect: NSRect(origin: .zero, size: size),
+                                  style: RemoteStyle.palette.chromeStyle, resizable: false, showsTitle: true)
+        window.title = L10n.string("HAScS Settings")
+        return window
+    }
+
+    private func configureSettings() {
+        let store = self.store
+        // The SecureField and any unsaved token are released when the window closes.
+        settings = HostedWindowController(releasesContentOnClose: true, window: Self.makeSettingsWindow, rootView: { [weak self] in
+            SettingsView(
+                repository: store.configuration,
+                onSaved: { [weak self] in
+                    self?.refreshTask?.cancel()
+                    store.invalidateConfiguration()
+                    self?.settings.close()
+                },
+                onCancel: { [weak self] in self?.settings.close() }
+            )
+        })
+    }
+
+    /// The floating, non-activating scene panel on every Space; it may become main for the grid.
+    static func makeScenePanel() -> BobukPanel {
+        let panel = BobukPanel(contentRect: NSRect(x: 0, y: 0, width: 622, height: 505), kind: .floating)
+        panel.title = L10n.string("Home scenes — HAScS")
+        panel.allowsMain = true
+        panel.collectionBehavior.insert(.transient)
+        return panel
     }
 
     private func configurePanel() {
-        let panel = RemotePanel(contentRect: NSRect(x: 0, y: 0, width: 622, height: 505),
-                                styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        panel.title = L10n.string("Home scenes — HAScS")
-        panel.isReleasedWhenClosed = false
-        panel.isFloatingPanel = true
-        panel.level = .floating
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
-        panel.backgroundColor = .clear
-        panel.isOpaque = false
-        panel.hasShadow = true
-        panel.hidesOnDeactivate = false
-        panel.delegate = self
+        let panel = Self.makeScenePanel()
+        // Focus loss and ⌘W close the panel through BobukPanel. Clicking another application
+        // dismisses this quick launcher, but never attempts to cancel an already-sent HA request.
+        panel.onDismiss = { [weak self] _ in self?.hidePanel() }
         panel.contentView = NSHostingView(rootView: ScenePanelView(
             store: store,
             activate: { [weak self] number in self?.activate(number) },
@@ -144,12 +150,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private func showPanel() {
         presentation += 1
         store.resetTransientState()
-        if let screen = NSScreen.screens.first(where: { $0.frame.contains(NSEvent.mouseLocation) }) ?? NSScreen.main {
-            let area = screen.visibleFrame
-            let rect = panel.frame
-            panel.setFrameOrigin(NSPoint(x: area.midX - rect.width / 2, y: area.midY - rect.height / 2))
-        }
-        NSApp.activate(ignoringOtherApps: true)
+        panel.place(size: panel.frame.size, anchor: .center())
+        AppActivation.activate()
         panel.makeKeyAndOrderFront(nil)
         refresh()
     }
@@ -174,33 +176,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
     }
 
-    func windowDidResignKey(_ notification: Notification) {
-        // Clicking another application dismisses this quick launcher, but never
-        // attempts to cancel an already-sent HA request.
-        if panel.isVisible { hidePanel() }
-    }
-
     private func configureKeyMonitor() {
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self, self.panel.isKeyWindow else { return event }
             let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-            if event.keyCode == 43 && modifiers.contains(.command) && !event.isARepeat {
+            if event.keyCode == VirtualKey.comma && modifiers.contains(.command) && !event.isARepeat {
                 self.openSettings()
                 return nil
             }
+            // Other ⌘ shortcuts go to BobukPanel: ⌘W closes, ⌘Q is swallowed.
             guard modifiers.intersection([.command, .control, .option]).isEmpty, !event.isARepeat else { return event }
-            // Physical digit keys still work with non-Latin keyboard layouts.
-            let digits: [UInt16: Int] = [18: 1, 19: 2, 20: 3, 21: 4, 23: 5, 22: 6, 26: 7, 28: 8, 25: 9,
-                                        83: 1, 84: 2, 85: 3, 86: 4, 87: 5, 88: 6, 89: 7, 91: 8, 92: 9]
-            if let number = digits[event.keyCode] {
+            if let number = SceneKeys.number(forKeyCode: event.keyCode) {
                 if !self.store.isReordering { self.activate(number) }
                 return nil
             }
             let direction: SceneGridDirection? = switch event.keyCode {
-            case 123: .left
-            case 124: .right
-            case 126: .up
-            case 125: .down
+            case VirtualKey.left: .left
+            case VirtualKey.right: .right
+            case VirtualKey.up: .up
+            case VirtualKey.down: .down
             default: nil
             }
             if let direction {
@@ -208,20 +202,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 else { self.store.moveSelection(direction) }
                 return nil
             }
-            if self.store.isReordering {
-                switch event.keyCode {
-                case 53: self.store.finishReordering(save: false); return nil
-                case 36, 76: self.store.finishReordering(save: true); return nil
-                default: return event
-                }
-            }
-            switch event.keyCode {
-            case 53: self.hidePanel(); return nil // Escape
-            case 36, 76:
-                if let number = self.store.selectedNumber { self.activate(number) }
+            // Escape cancels reordering before it closes the panel, so it is handled here.
+            if event.keyCode == VirtualKey.escape {
+                if self.store.isReordering { self.store.finishReordering(save: false) }
+                else { self.panel.dismiss(.escape) }
                 return nil
-            default: return event
             }
+            guard VirtualKey.isReturn(event.keyCode) else { return event }
+            if self.store.isReordering { self.store.finishReordering(save: true) }
+            else if let number = self.store.selectedNumber { self.activate(number) }
+            return nil
         }
     }
 

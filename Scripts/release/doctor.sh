@@ -44,9 +44,9 @@ if [[ -n "$LANDING_SLUG" ]]; then
   check "landing page src/data/apps/$LANDING_SLUG.ts" test -f "$LANDING/src/data/apps/$LANDING_SLUG.ts"
   check "tool npm" command -v npm
 fi
-CANON="$ROOT/../ting"
-if [[ -x "$CANON/Scripts/release/sync_kit.sh" && "$(cd "$CANON" && pwd)" != "$ROOT" ]]; then
-  check "kit matches the canonical copy in ../ting" bash "$CANON/Scripts/release/sync_kit.sh" --check "$ROOT"
+KIT="$ROOT/../BobukKit"
+if [[ -x "$KIT/Scripts/sync.sh" ]]; then
+  check "release kit and Vendor/BobukKit match ../BobukKit" bash "$KIT/Scripts/sync.sh" --check "$ROOT"
 fi
 if ((problems > 0)); then echo "DOCTOR: $problems problem(s)"; exit 1; fi
 echo "DOCTOR: ready"

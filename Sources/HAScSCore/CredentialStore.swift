@@ -1,5 +1,5 @@
+import BobukSystem
 import Foundation
-import Security
 
 public enum CredentialError: LocalizedError, Equatable {
     case keychain(OSStatus)
@@ -20,34 +20,19 @@ public protocol CredentialStorage {
     func save(_ configuration: Configuration) throws
 }
 
-/// One generic-password item contains both values, so updates are atomic.
-/// The Keychain decides the item's access policy; no broad access ACL is installed.
+/// One generic-password item (BobukSystem's `KeychainItem`) contains both values as JSON
+/// (`{"url":…,"token":…}`), so updates are atomic. The Keychain decides the item's access
+/// policy; no broad access ACL is installed and the item never synchronizes.
 public struct KeychainCredentialStore: CredentialStorage {
-    private let service: String
-    private let account = "home-assistant-connection"
+    private let item: KeychainItem
 
     public init(service: String = "io.bobuk.HAScS.credentials.v1") {
-        self.service = service
-    }
-
-    private var query: [String: Any] {
-        [kSecClass as String: kSecClassGenericPassword,
-         kSecAttrService as String: service,
-         kSecAttrAccount as String: account,
-         kSecAttrSynchronizable as String: false]
+        item = KeychainItem(service: service, account: "home-assistant-connection")
     }
 
     public func read() throws -> Configuration? {
-        var request = query
-        request[kSecReturnData as String] = true
-        request[kSecMatchLimit as String] = kSecMatchLimitOne
-        var result: CFTypeRef?
-        let status = SecItemCopyMatching(request as CFDictionary, &result)
-        if status == errSecItemNotFound { return nil }
-        guard status == errSecSuccess else { throw CredentialError.keychain(status) }
-        guard let data = result as? Data,
-              let stored = try? JSONDecoder().decode(StoredCredentials.self, from: data),
-              let url = URL(string: stored.url),
+        guard let stored = try mapped({ try item.readCodable(StoredCredentials.self) }) else { return nil }
+        guard let url = URL(string: stored.url),
               let configuration = try? Configuration(baseURL: url, token: stored.token) else {
             throw CredentialError.corrupt
         }
@@ -55,21 +40,15 @@ public struct KeychainCredentialStore: CredentialStorage {
     }
 
     public func save(_ configuration: Configuration) throws {
-        let data = try JSONEncoder().encode(StoredCredentials(url: configuration.baseURL.absoluteString, token: configuration.token))
-        let update = [kSecValueData as String: data]
-        let status = SecItemUpdate(query as CFDictionary, update as CFDictionary)
-        if status == errSecSuccess { return }
-        guard status == errSecItemNotFound else { throw CredentialError.keychain(status) }
-        var item = query
-        item[kSecValueData as String] = data
-        let addStatus = SecItemAdd(item as CFDictionary, nil)
-        // Another process may have created the item between update and add.
-        if addStatus == errSecDuplicateItem {
-            let retry = SecItemUpdate(query as CFDictionary, update as CFDictionary)
-            guard retry == errSecSuccess else { throw CredentialError.keychain(retry) }
-        } else if addStatus != errSecSuccess {
-            throw CredentialError.keychain(addStatus)
-        }
+        let stored = StoredCredentials(url: configuration.baseURL.absoluteString, token: configuration.token)
+        try mapped { try item.writeCodable(stored) }
+    }
+
+    /// Keychain failures keep HAScS's localized messages.
+    private func mapped<T>(_ body: () throws -> T) throws -> T {
+        do { return try body() }
+        catch KeychainError.status(let status) { throw CredentialError.keychain(status) }
+        catch KeychainError.corrupt { throw CredentialError.corrupt }
     }
 
     private struct StoredCredentials: Codable {

@@ -82,9 +82,14 @@ assignments are migrated from earlier local identifiers without changing them.
 
 ## Develop
 
-HAScS uses [BobukKit](https://github.com/bobuk-io/BobukKit) for localized
-shortcut hints in the footer. Scene tiles, grid navigation, reordering, the close
-button and activation remain app-owned. English, Ukrainian and Russian are retained.
+HAScS uses [BobukKit](https://github.com/bobuk-io/BobukKit) for the floating scene
+panel (`BobukPanel`: focus loss, Escape and Command-W close it), its placement on the
+screen under the pointer, the Settings window (`ChromeWindow` with `HostedWindowController`,
+which releases the token field on close and routes Command-C/V/X/A/Z to its fields without
+an Edit menu), layout-independent digit keys (`VirtualKey`), app activation, Keychain access
+(`KeychainItem`), the localization bundle lookup without `Bundle.module` (`AppBundle`) and
+the localized shortcut hints in the footer. Scene tiles, grid navigation, digit hotkeys, reordering, the status-item clicks
+and scene activation remain app-owned. English, Ukrainian and Russian are retained.
 
 The self-contained package is in `Vendor/BobukKit`. Edit shared components only
 in `~/GitHub/bobuk.io/BobukKit`, then run its `Scripts/sync.sh` and

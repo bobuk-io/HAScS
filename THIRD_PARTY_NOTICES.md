@@ -3,8 +3,8 @@
 HAScS's original code is licensed under [0BSD](LICENSE). The following adapted
 files retain their upstream MIT license:
 
-- `Scripts/package_app.sh`: adapted from
-  `macos-spm-app-packaging/assets/templates/package_app.sh`.
+- `Scripts/release/package.sh` (the shared packager behind `Scripts/package_app.sh`):
+  adapted from `macos-spm-app-packaging/assets/templates/package_app.sh`.
 - `Scripts/release/build.sh` and `Scripts/release/install.sh` (the shared release
   kit): adapted from the same skill's `assets/templates/sign-and-notarize.sh`
   workflow.

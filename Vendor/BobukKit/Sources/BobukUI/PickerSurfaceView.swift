@@ -3,6 +3,8 @@ import AppKit
 /// The shared panel frame for AppKit and SwiftUI. No window/focus policy lives here.
 @MainActor public final class PickerSurfaceView: NSView {
     public var palette: PickerPalette { didSet { needsDisplay = true } }
+    /// 0...1 turns the accent rule into a loading bar; nil draws the solid rule.
+    public var accentProgress: Double? { didSet { needsDisplay = true } }
     public override var isFlipped: Bool { true }
 
     public init(palette: PickerPalette) {
@@ -23,9 +25,16 @@ import AppKit
     public override func draw(_ dirtyRect: NSRect) {
         palette.surface.setFill()
         bounds.fill()
-        palette.accent.setFill()
-        NSRect(x: bounds.minX, y: bounds.minY, width: bounds.width,
-               height: PickerMetrics.accentHeight).fill()
+        let rule = NSRect(x: bounds.minX, y: bounds.minY, width: bounds.width, height: PickerMetrics.accentHeight)
+        if let progress = accentProgress {
+            palette.accent.withAlphaComponent(0.3).setFill()
+            rule.fill()
+            palette.accent.setFill()
+            NSRect(x: rule.minX, y: rule.minY, width: rule.width * max(0.05, min(1, progress)), height: rule.height).fill()
+        } else {
+            palette.accent.setFill()
+            rule.fill()
+        }
         palette.border.setStroke()
         let inset = PickerMetrics.borderWidth / 2
         let outline = NSBezierPath(roundedRect: bounds.insetBy(dx: inset, dy: inset),

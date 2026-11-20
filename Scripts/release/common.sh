@@ -1,6 +1,6 @@
 # Shared helpers of the bobuk.io release kit. Sourced by the other kit scripts, never run.
 # The kit is identical in every app repository; app facts live in release.env and version.env.
-# Canonical copy: ting/Scripts/release. Copy changes with Scripts/release/sync_kit.sh.
+# Canonical copy: BobukKit/ReleaseKit/release. Change it there and run BobukKit/Scripts/sync.sh.
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
